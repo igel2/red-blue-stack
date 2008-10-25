@@ -1,0 +1,31 @@
+
+Name:                red-blue-stack
+Version:             0.1.0
+Stability:           experimental
+
+Category:            Data Structures
+Synopsis:            Red-Blue-Stack
+Description:         A Red-Blue-Stack behaves just like a normal stack. But it
+                     additionally tags every pushed element with a colour
+                     (red or blue). It is possible to pop the topmost (in the
+                     LIFO sense) red/blue element or the overall-top element
+                     (no matter which colour it has been tagged with).
+
+License:             BSD3
+License-File:        LICENSE
+Copyright:           (c) 2008, Stephan Friedrichs
+
+Author:              Stephan Friedrichs
+Maintainer:          Stephan Friedrichs (deduktionstheorem at web dot de)
+
+Build-Type:          Simple
+Cabal-Version:       >= 1.2
+
+Library
+  Build-Depends:
+      base
+    , containers >= 0.1
+  Exposed-Modules:   Data.RedBlueStack
+  ghc-options:       -O2 -Wall
+  Extensions:        CPP
+
