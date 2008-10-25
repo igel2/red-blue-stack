@@ -36,6 +36,10 @@ module Data.RedBlueStack
     , pop, popRed, popBlue
       -- * Map
     , mapBoth, mapRed, mapBlue
+      -- * Fold
+    , foldrBoth, foldlBoth
+    , foldrRed,  foldlRed
+    , foldrBlue, foldlBlue
       -- * Conversion
       -- ** Lists
     , fromList, toList, toLists
@@ -43,12 +47,13 @@ module Data.RedBlueStack
     , toSeq, toSeqs
     ) where
 
+import Data.Foldable as Foldable hiding (toList)
 import qualified Data.Foldable as Foldable
 import Data.Monoid
 import Data.Ord
 import Data.Sequence hiding (empty, fromList, singleton)
 import qualified Data.Sequence as Seq
-import Prelude hiding (length, null)
+import Prelude hiding (foldl, foldr, length, null)
 import Text.Read
 
 -- | Red-blue-stack type. @r@ and @b@ are the types of red and blue items.
@@ -81,6 +86,10 @@ instance (Ord r, Ord b) => Ord (RedBlueStack r b) where
 
 instance Functor (RedBlueStack r) where
     fmap = mapBlue
+
+instance Foldable.Foldable (RedBlueStack r) where
+    foldr = foldrBlue
+    foldl = foldlBlue
 
 -- | /O(1)/. Find out if the stack is empty.
 isEmpty :: RedBlueStack r b -> Bool
@@ -203,11 +212,43 @@ mapBoth f g (RBStack rs stack) = RBStack (fmap f rs) $ mapBoth g f stack
 
 -- | /O(n)/. Map red elements only.
 mapRed :: (r -> r') -> RedBlueStack r b -> RedBlueStack r' b
-mapRed = (flip mapBoth) id
+mapRed _ Empty                           = Empty
+mapRed f (RBStack rs Empty)              = RBStack (fmap f rs) Empty
+mapRed f (RBStack rs (RBStack bs stack)) = RBStack (fmap f rs) (RBStack bs (mapRed f stack))
 
 -- | /O(n)/. map blue elements only.
 mapBlue :: (b -> b') -> RedBlueStack r b -> RedBlueStack r b'
-mapBlue = mapBoth id
+mapBlue f = recolour . mapRed f . recolour
+
+-- | Right-associative fold over all elements.
+foldrBoth :: (r -> m -> m) -> (b -> m -> m) -> m -> RedBlueStack r b -> m
+foldrBoth _ _ x Empty              = x
+foldrBoth f g x (RBStack rs stack) = foldr f (foldrBoth g f x stack) rs
+
+-- | Left-associative fold over all elements.
+foldlBoth :: (m -> r -> m) -> (m -> b -> m) -> m -> RedBlueStack r b -> m
+foldlBoth _ _ x Empty              = x
+foldlBoth f g x (RBStack rs stack) = foldlBoth g f (foldl f x rs) stack
+
+-- | Right-associative fold of the red elements.
+foldrRed :: (r -> m -> m) -> m -> RedBlueStack r b -> m
+foldrRed _ x Empty                          = x
+foldrRed f x (RBStack rs Empty)             = foldr f x rs
+foldrRed f x (RBStack rs (RBStack _ stack)) = foldr f (foldrRed f x stack) rs
+
+-- | Left-associative fold of the red elements.
+foldlRed :: (m -> r -> m) -> m -> RedBlueStack r b -> m
+foldlRed _ x Empty                          = x
+foldlRed f x (RBStack rs Empty)             = foldl f x rs
+foldlRed f x (RBStack rs (RBStack _ stack)) = foldlRed f (foldl f x rs) stack
+
+-- | Right-associative fold of the blue elements.
+foldrBlue :: (b -> m -> m) -> m -> RedBlueStack r b -> m
+foldrBlue f x = foldrRed f x . recolour
+
+-- | Left-associative fold of the blue elements.
+foldlBlue :: (m -> b -> m) -> m -> RedBlueStack r b -> m
+foldlBlue f x = foldlRed f x . recolour
 
 -- | /O(log n)/. Build a stack from a list.
 fromList :: [Either r b] -> RedBlueStack r b
