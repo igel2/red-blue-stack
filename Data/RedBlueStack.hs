@@ -34,6 +34,8 @@ module Data.RedBlueStack
     , view, viewRed, viewBlue
     , top, topRed, topBlue
     , pop, popRed, popBlue
+      -- * Map
+    , mapBoth, mapRed, mapBlue
       -- * Conversion
       -- ** Lists
     , fromList, toList, toLists
@@ -77,6 +79,9 @@ instance (Eq r, Eq b) => Eq (RedBlueStack r b) where
 instance (Ord r, Ord b) => Ord (RedBlueStack r b) where
     compare = comparing toList
 
+instance Functor (RedBlueStack r) where
+    fmap = mapBlue
+
 -- | /O(1)/. Find out if the stack is empty.
 isEmpty :: RedBlueStack r b -> Bool
 isEmpty Empty              = True
@@ -105,13 +110,11 @@ blueSingleton = recolour . redSingleton
 
 -- | /O(1)/. Swaps the colours of all items.
 recolour :: RedBlueStack r b -> RedBlueStack b r
-recolour Empty                     = Empty -- remove due to RULES?
+recolour Empty                     = Empty
 recolour stack@(RBStack rs stack') = if null rs
     then stack'
     else RBStack mempty stack
 {-# INLINE recolour #-}
-
--- TODO: caution wrt invariant!
 {-# RULES "recolour/recolour" forall s. recolour (recolour s) = s #-}
 
 -- | /O(1)/. Push either a red or a blue item on the stack.
@@ -192,6 +195,19 @@ popRed = fmap snd . viewRed
 -- | /O(log b)/. Remove the topmost blue item from the stack.
 popBlue :: RedBlueStack r b -> Maybe (RedBlueStack r b)
 popBlue = fmap snd . viewBlue
+
+-- | /O(n)/. Map both red and blue elements.
+mapBoth :: (r -> r') -> (b -> b') -> RedBlueStack r b -> RedBlueStack r' b'
+mapBoth _ _ Empty              = Empty
+mapBoth f g (RBStack rs stack) = RBStack (fmap f rs) $ mapBoth g f stack
+
+-- | /O(n)/. Map red elements only.
+mapRed :: (r -> r') -> RedBlueStack r b -> RedBlueStack r' b
+mapRed = (flip mapBoth) id
+
+-- | /O(n)/. map blue elements only.
+mapBlue :: (b -> b') -> RedBlueStack r b -> RedBlueStack r b'
+mapBlue = mapBoth id
 
 -- | /O(log n)/. Build a stack from a list.
 fromList :: [Either r b] -> RedBlueStack r b
