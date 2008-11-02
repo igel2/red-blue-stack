@@ -30,6 +30,7 @@ module Data.RedBlueStack
     , singleton, redSingleton, blueSingleton
     , recolour
     , push, pushRed, pushBlue
+    , append
       -- * Deconstruction
     , view, viewRed, viewBlue
     , top, topRed, topBlue
@@ -138,6 +139,16 @@ pushRed r (RBStack rs stack) = RBStack (r <| rs) stack
 -- | /O(1)/. Push a blue item on the stack.
 pushBlue :: b -> RedBlueStack r b -> RedBlueStack r b
 pushBlue b = recolour . pushRed b . recolour
+
+-- | /O(n)/ (length of the first stack). Appends the elements of the 2nd stack
+-- to the first, so that @append s1 s2 == fromList (toList s1 ++ toList s2)@.
+append :: RedBlueStack r b -> RedBlueStack r b -> RedBlueStack r b
+append stack1              Empty               = stack1
+append Empty               stack2              = stack2
+append (RBStack rs1 Empty) (RBStack rs2 tail2) = RBStack (rs1 >< rs2) tail2
+append (RBStack rs1 blue1@(RBStack bs1 tail1)) stack2@(RBStack rs2 tail2)
+    | null rs2  = RBStack rs1 (append blue1 tail2)
+    | otherwise = RBStack rs1 (RBStack bs1 (append tail1 stack2))
 
 -- | /O(1)/. Finds the top item of the stack, whatever it colour it is tagged
 -- with. Returns this item and the stack with that item removed or 'Nothing' if
@@ -272,7 +283,7 @@ toSeq (RBStack rs stack) = (fmap Left rs) >< toSeqBlue stack
     toSeqBlue Empty               = mempty
     toSeqBlue (RBStack bs stack') = (fmap Right bs) >< toSeq stack'
 
--- | Seperate the red from the blue items in (order-preserving) 'Seq's.
+-- | Separate the red from the blue items in (order-preserving) 'Seq's.
 toSeqs :: RedBlueStack r b -> (Seq r, Seq b)
 toSeqs Empty                           = (mempty, mempty)
 toSeqs (RBStack rs Empty)              = (rs,     mempty)

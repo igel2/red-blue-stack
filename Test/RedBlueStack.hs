@@ -12,18 +12,20 @@ type TestEither = Either Int Char
 
 testRedBlueStack :: IO ()
 testRedBlueStack = do
-    putStr "Invariants:                             "
+    putStr "Invariants:                                     "
     quickCheck (checkInvariants :: TestStack -> Bool)
-    putStr "read . show === id                      "
+    putStr "read . show === id                              "
     quickCheck (readShowProperty :: TestStack -> Bool)
-    putStr "recolour . recolour === id              "
+    putStr "recolour . recolour === id                      "
     quickCheck (recolourProperty :: TestStack -> Bool)
-    putStr "view (push x stack) == Just (x, stack)  "
+    putStr "view (push x stack) == Just (x, stack)          "
     quickCheck (pushViewProperty :: TestEither -> TestStack -> Bool)
-    putStr "popRed                                  "
+    putStr "popRed                                          "
     quickCheck (popRedProperty :: TestStack -> Bool)
-    putStr "popBlue                                 "
+    putStr "popBlue                                         "
     quickCheck (popBlueProperty :: TestStack -> Bool)
+    putStr "toList (append s1 s2) == toList s1 ++ toList s2 "
+    quickCheck (appendProperty :: TestStack -> TestStack -> Bool)
     return ()
 
 instance (Arbitrary r, Arbitrary b) => Arbitrary (RedBlueStack r b) where
@@ -67,4 +69,10 @@ popBlueProperty stack = let
     popAllBlue stack = case popBlue stack of
         Nothing     -> stack
         Just stack' -> popAllBlue stack'
+
+appendProperty :: (Eq r, Eq b) => RedBlueStack r b -> RedBlueStack r b -> Bool
+appendProperty stack1 stack2 = let
+    stack12 = stack1 `append` stack2
+    in
+    checkInvariants stack12 && toList stack12 == toList stack1 ++ toList stack2
 
