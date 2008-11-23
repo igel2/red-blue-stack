@@ -277,11 +277,9 @@ toLists stack = let (rs, bs) = toSeqs stack
 
 -- | Convert a stack to a 'Seq'.
 toSeq :: RedBlueStack r b -> Seq (Either r b)
-toSeq Empty              = mempty
-toSeq (RBStack rs stack) = (fmap Left rs) >< toSeqBlue stack
-    where
-    toSeqBlue Empty               = mempty
-    toSeqBlue (RBStack bs stack') = (fmap Right bs) >< toSeq stack'
+toSeq Empty                           = mempty
+toSeq (RBStack rs Empty)              = fmap Left rs
+toSeq (RBStack rs (RBStack bs stack)) = fmap Left rs >< fmap Right bs >< toSeq stack
 
 -- | Separate the red from the blue items in (order-preserving) 'Seq's.
 toSeqs :: RedBlueStack r b -> (Seq r, Seq b)
