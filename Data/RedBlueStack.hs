@@ -1,4 +1,4 @@
-{-# LANGUAGE CPP #-}
+{-# LANGUAGE CPP, DeriveDataTypeable #-}
 
 -- | A Red-Blue-Stack behaves just like a normal stack. But it additionally
 -- tags every pushed element with a colour (red or blue). It is possible to pop
@@ -55,6 +55,7 @@ import Data.Monoid
 import Data.Ord
 import Data.Sequence hiding (empty, fromList, singleton)
 import qualified Data.Sequence as Seq
+import Data.Typeable
 import Prelude hiding (foldl, foldr, length, null)
 import Text.Read
 
@@ -62,6 +63,7 @@ import Text.Read
 data RedBlueStack r b
     = Empty
     | RBStack (Seq r) (RedBlueStack b r) -- invariant: only first sequence may be empty
+    deriving (Typeable)
 
 instance (Show r, Show b) => Show (RedBlueStack r b) where
     show = ("fromList " ++) . show . toList
