@@ -48,6 +48,7 @@ module Data.RedBlueStack
     , toSeq, toSeqs
     ) where
 
+import Control.Exception (assert)
 import Data.Foldable as Foldable hiding (toList)
 import qualified Data.Foldable as Foldable
 import Data.Monoid
@@ -171,10 +172,10 @@ viewRed (RBStack rs1 stack) = case viewl rs1 of
     r :< rs -> Just (r, RBStack rs stack)
     EmptyL  -> case stack of
         RBStack bs (RBStack rs2 stack') -> case viewl rs2 of
-            EmptyL  -> Nothing -- shouldn't happen...
             r :< rs -> if null rs
                 then Just (r, recolour (pushMany bs stack'))
                 else Just (r, recolour (RBStack bs (RBStack rs stack')))
+            EmptyL  -> assert False Nothing -- only the 1st, not the 3rd Seq may be empty!
         _                               -> Nothing
     where
     pushMany :: Seq r -> RedBlueStack r b -> RedBlueStack r b
