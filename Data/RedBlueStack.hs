@@ -1,9 +1,9 @@
 {-# LANGUAGE CPP, DeriveDataTypeable #-}
 
--- | A Red-Blue-Stack behaves just like a normal stack. But it additionally
--- tags every pushed element with a colour (red or blue). It is possible to pop
--- the topmost (in the LIFO sense) red/blue element or the overall-top element
--- (no matter which colour it has been tagged with).
+-- | A Red-Blue-Stack behaves just like a normal stack. But it additionally tags
+-- every pushed element with a colour (red or blue). It is possible to pop the
+-- topmost (in the LIFO sense) red/blue element or the overall-top element (no
+-- matter which colour it has been tagged with).
 --
 -- The tagging is done using the type system: A 'RedBlueStack' has two type
 -- parameters: one for the red and one for the blue items. This way the type
@@ -166,8 +166,8 @@ view (RBStack rss stack) = case viewl rss of
 {-# INLINE view #-}
 
 -- | /O(1)/ for the top element and /O(log r)/ for the remaining stack. Finds
--- the topmost red item in the stack and removes it from the stack. If the
--- stack doesn't contain any red item, 'Nothing' is returned.
+-- the topmost red item in the stack and removes it from the stack. If the stack
+-- doesn't contain any red item, 'Nothing' is returned.
 viewRed :: RedBlueStack r b -> Maybe (r, RedBlueStack r b)
 viewRed Empty               = Nothing
 viewRed (RBStack rs1 stack) = case viewl rs1 of
