@@ -4,7 +4,7 @@ module Test.RedBlueStack
 
 import Data.RedBlueStack
 import Data.Sequence hiding (drop, fromList, splitAt, take)
-import Prelude hiding (drop, null, splitAt, take)
+import Prelude hiding (break, drop, dropWhile, null, span, splitAt, take, takeWhile)
 import Test.QuickCheck
 
 type TestStack  = RedBlueStack Int Char
@@ -28,7 +28,12 @@ testRedBlueStack = do
     quickCheck (appendProperty :: TestStack -> TestStack -> Bool)
     putStr "split n s == (take n s, drop n s)               "
     quickCheck (splitProperty :: TestStack -> Int -> Bool)
+    putStr "span/break/takeWhile/dropWhile                  "
+    quickCheck (spanProperty prop :: TestStack -> Bool)
     return ()
+    where
+    prop (Left n)  = n `mod` 2 == 0
+    prop (Right c) = 'A' < c
 
 instance (Arbitrary r, Arbitrary b) => Arbitrary (RedBlueStack r b) where
     arbitrary = do
@@ -86,4 +91,19 @@ splitProperty stack n = let
         && stack1 `append` stack2 == stack
         && stack1 == take n stack
         && stack2 == drop n stack
+
+spanProperty :: (Eq r, Eq b) => (Either r b -> Bool) -> RedBlueStack r b -> Bool
+spanProperty p stack = let
+    (stack1, stack2) = span p stack
+    redP             = p . Left
+    blueP            = p . Right
+    in
+    checkInvariants stack1 && checkInvariants stack2
+        && stack1 == takeWhile p stack
+        && stack2 == dropWhile p stack
+        && (stack1, stack2) == break (not . p) stack
+        && foldlBoth (&&) (&&) True (mapBoth redP blueP stack1)
+        && (case view stack2 of
+            Nothing     -> True
+            Just (x, _) -> not $ p x)
 

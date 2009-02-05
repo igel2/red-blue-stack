@@ -38,6 +38,7 @@ module Data.RedBlueStack
     , pop, popRed, popBlue
       -- ** Substacks
     , take, drop, splitAt
+    , takeWhile, dropWhile, span, break
       -- * Map
     , mapBoth, mapRed, mapBlue
       -- * Fold
@@ -59,7 +60,9 @@ import Data.Ord
 import Data.Sequence hiding (drop, empty, fromList, singleton, splitAt, take)
 import qualified Data.Sequence as Seq
 import Data.Typeable
-import Prelude hiding (drop, foldl, foldr, length, null, splitAt, take)
+import Prelude hiding
+    ( break, drop, dropWhile, foldl, foldr, length, null, span, splitAt, take
+    , takeWhile )
 import Text.Read
 
 -- | Red-blue-stack type. @r@ and @b@ are the types of red and blue items.
@@ -243,6 +246,30 @@ splitAt n (RBStack rs stack)
          in (RBStack rs' Empty, RBStack rs'' stack)
     where
     redLength = length rs
+
+-- | /O(n)/. Returns the longest prefix of elements fulfilling the predicate.
+takeWhile :: (Either r b -> Bool) -> RedBlueStack r b -> RedBlueStack r b
+takeWhile p = fst . span p
+
+-- | /O(n)/. Removes the longest prefix of elements not fulfilling the predicate.
+dropWhile :: (Either r b -> Bool) -> RedBlueStack r b -> RedBlueStack r b
+dropWhile p = snd . span p
+
+-- | /O(n)/. Returns a tuple of 'RedBlueStack's. The first is the longest prefix
+-- fulfilling the predicate, the second one is the rest of the 'RedBlueStack'.
+-- @ 'span' p s = ('takeWhile' p s, 'dropWhile' p s) @.
+span :: (Either r b -> Bool) -> RedBlueStack r b -> (RedBlueStack r b, RedBlueStack r b)
+span p stack = case view stack of
+    Nothing      -> (empty, empty)
+    Just (x, xs) -> if p x
+        then let (yes, no) = span p xs in (push x yes, no)
+        else (empty, stack)
+
+-- | /O(n)/. Returns a tuple of 'RedBlueStack's. The first is the longest prefix
+-- /not/ fulfilling the predicate, the second one is the rest of the
+-- 'RedBlueStack'. @ 'break' p = 'span' ('not' . p) @.
+break :: (Either r b -> Bool) -> RedBlueStack r b -> (RedBlueStack r b, RedBlueStack r b)
+break p = span (not . p)
 
 -- | /O(n)/. Map both red and blue elements.
 mapBoth :: (r -> r') -> (b -> b') -> RedBlueStack r b -> RedBlueStack r' b'
