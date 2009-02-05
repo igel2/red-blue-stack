@@ -94,6 +94,10 @@ instance (Eq r, Eq b) => Eq (RedBlueStack r b) where
 instance (Ord r, Ord b) => Ord (RedBlueStack r b) where
     compare = comparing toList
 
+instance Monoid (RedBlueStack r b) where
+    mempty  = empty
+    mappend = append
+
 instance Functor (RedBlueStack r) where
     fmap = mapBlue
 
