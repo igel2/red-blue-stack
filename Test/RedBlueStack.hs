@@ -3,8 +3,8 @@ module Test.RedBlueStack
     ) where
 
 import Data.RedBlueStack
-import Data.Sequence hiding (fromList)
-import Prelude hiding (null)
+import Data.Sequence hiding (drop, fromList, splitAt, take)
+import Prelude hiding (drop, null, splitAt, take)
 import Test.QuickCheck
 
 type TestStack  = RedBlueStack Int Char
@@ -26,6 +26,8 @@ testRedBlueStack = do
     quickCheck (popBlueProperty :: TestStack -> Bool)
     putStr "toList (append s1 s2) == toList s1 ++ toList s2 "
     quickCheck (appendProperty :: TestStack -> TestStack -> Bool)
+    putStr "split n s == (take n s, drop n s)               "
+    quickCheck (splitProperty :: TestStack -> Int -> Bool)
     return ()
 
 instance (Arbitrary r, Arbitrary b) => Arbitrary (RedBlueStack r b) where
@@ -75,4 +77,13 @@ appendProperty stack1 stack2 = let
     stack12 = stack1 `append` stack2
     in
     checkInvariants stack12 && toList stack12 == toList stack1 ++ toList stack2
+
+splitProperty :: (Eq r, Eq b) => RedBlueStack r b -> Int -> Bool
+splitProperty stack n = let
+    (stack1, stack2) = splitAt n stack
+    in
+    checkInvariants stack1 && checkInvariants stack2
+        && stack1 `append` stack2 == stack
+        && stack1 == take n stack
+        && stack2 == drop n stack
 

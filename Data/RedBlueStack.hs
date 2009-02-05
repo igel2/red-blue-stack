@@ -9,7 +9,7 @@
 -- parameters: one for the red and one for the blue items. This way the type
 -- system prevents us from mixing up red and blue items.
 --
--- Whenever the /O/ notation is used, /n/ denotes the total number of elements
+-- Whenever the /O/-notation is used, /n/ denotes the total number of elements
 -- in the stack. /r/ (and /b/) denote the minimum of the lengths of the first
 -- two red (or blue) subsequences on the stack. For instance an @[r,r,r,r,b,r,r]@
 -- stack would have /r = 2/ and /b = 0/.
@@ -32,9 +32,12 @@ module Data.RedBlueStack
     , push, pushRed, pushBlue
     , append
       -- * Deconstruction
+      -- ** Views
     , view, viewRed, viewBlue
     , top, topRed, topBlue
     , pop, popRed, popBlue
+      -- ** Substacks
+    , take, drop, splitAt
       -- * Map
     , mapBoth, mapRed, mapBlue
       -- * Fold
@@ -53,10 +56,10 @@ import Data.Foldable as Foldable hiding (toList)
 import qualified Data.Foldable as Foldable
 import Data.Monoid
 import Data.Ord
-import Data.Sequence hiding (empty, fromList, singleton)
+import Data.Sequence hiding (drop, empty, fromList, singleton, splitAt, take)
 import qualified Data.Sequence as Seq
 import Data.Typeable
-import Prelude hiding (foldl, foldr, length, null)
+import Prelude hiding (drop, foldl, foldr, length, null, splitAt, take)
 import Text.Read
 
 -- | Red-blue-stack type. @r@ and @b@ are the types of red and blue items.
@@ -219,6 +222,28 @@ popRed = fmap snd . viewRed
 popBlue :: RedBlueStack r b -> Maybe (RedBlueStack r b)
 popBlue = fmap snd . viewBlue
 
+-- | /O(n)/. The first /n/ elements of a 'RedBlueStack'.
+take :: Int -> RedBlueStack r b -> RedBlueStack r b
+take n = fst . splitAt n
+
+-- | /O(n)/. A 'RedBlueStack' holding all elements after the /n/-th.
+drop :: Int -> RedBlueStack r b -> RedBlueStack r b
+drop n = snd . splitAt n
+
+-- | /O(n)/. Split a 'RedBlueStack' at position /n/.
+-- @'splitAt' n s = ('take' n s, 'drop' n s)@.
+splitAt :: Int -> RedBlueStack r b -> (RedBlueStack r b, RedBlueStack r b)
+splitAt _ Empty = (empty, empty)
+splitAt n (RBStack rs stack)
+    | n >= redLength = let
+        (first, remaining) = splitAt (n - redLength) stack
+        in (RBStack rs Empty `append` recolour first, recolour remaining)
+    | otherwise      = let
+         (rs', rs'') = Seq.splitAt n rs
+         in (RBStack rs' Empty, RBStack rs'' stack)
+    where
+    redLength = length rs
+
 -- | /O(n)/. Map both red and blue elements.
 mapBoth :: (r -> r') -> (b -> b') -> RedBlueStack r b -> RedBlueStack r' b'
 mapBoth _ _ Empty              = Empty
@@ -278,6 +303,7 @@ toLists :: RedBlueStack r b -> ([r], [b])
 toLists stack = let (rs, bs) = toSeqs stack
     in (Foldable.toList rs, Foldable.toList bs)
 
+
 -- | Convert a stack to a 'Seq'.
 toSeq :: RedBlueStack r b -> Seq (Either r b)
 toSeq Empty                           = mempty
@@ -291,4 +317,3 @@ toSeqs (RBStack rs Empty)              = (rs,     mempty)
 toSeqs (RBStack rs (RBStack bs stack)) = let
     (rss, bss) = toSeqs stack
     in (rs >< rss, bs >< bss)
-
