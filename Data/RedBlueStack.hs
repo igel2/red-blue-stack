@@ -28,9 +28,10 @@ module Data.RedBlueStack
       -- * Construction
     , empty
     , singleton, redSingleton, blueSingleton
-    , recolour
     , push, pushRed, pushBlue
     , append
+      -- * Transformations
+    , recolour, reverse
       -- * Deconstruction
       -- ** Views
     , view, viewRed, viewBlue
@@ -57,12 +58,12 @@ import Data.Foldable as Foldable hiding (toList)
 import qualified Data.Foldable as Foldable
 import Data.Monoid
 import Data.Ord
-import Data.Sequence hiding (drop, empty, fromList, singleton, splitAt, take)
+import Data.Sequence hiding (drop, empty, fromList, reverse, singleton, splitAt, take)
 import qualified Data.Sequence as Seq
 import Data.Typeable
 import Prelude hiding
-    ( break, drop, dropWhile, foldl, foldr, length, null, span, splitAt, take
-    , takeWhile )
+    ( break, drop, dropWhile, foldl, foldr, length, null, reverse, span, splitAt
+    , take, takeWhile )
 import Text.Read
 
 -- | Red-blue-stack type. @r@ and @b@ are the types of red and blue items.
@@ -131,15 +132,6 @@ redSingleton r = RBStack (Seq.singleton r) empty
 blueSingleton :: b -> RedBlueStack r b
 blueSingleton = recolour . redSingleton
 
--- | /O(1)/. Swaps the colours of all items.
-recolour :: RedBlueStack r b -> RedBlueStack b r
-recolour Empty                     = Empty
-recolour stack@(RBStack rs stack') = if null rs
-    then stack'
-    else RBStack mempty stack
-{-# INLINE recolour #-}
-{-# RULES "recolour/recolour" forall s. recolour (recolour s) = s #-}
-
 -- | /O(1)/. Push either a red or a blue item on the stack.
 push :: Either r b -> RedBlueStack r b -> RedBlueStack r b
 push = either pushRed pushBlue
@@ -162,6 +154,21 @@ append (RBStack rs1 Empty) (RBStack rs2 tail2) = RBStack (rs1 >< rs2) tail2
 append (RBStack rs1 blue1@(RBStack bs1 tail1)) stack2@(RBStack rs2 tail2)
     | null rs2  = RBStack rs1 (append blue1 tail2)
     | otherwise = RBStack rs1 (RBStack bs1 (append tail1 stack2))
+
+-- | /O(1)/. Swaps the colours of all items.
+recolour :: RedBlueStack r b -> RedBlueStack b r
+recolour Empty                     = Empty
+recolour stack@(RBStack rs stack') = if null rs
+    then stack'
+    else RBStack mempty stack
+{-# INLINE recolour #-}
+{-# RULES "recolour/recolour" forall s. recolour (recolour s) = s #-}
+
+-- | /O(n)/. Reverse the order of elements.
+reverse :: RedBlueStack r b -> RedBlueStack r b
+reverse Empty              = Empty
+reverse (RBStack rs stack) = recolour (reverse stack)
+    `append` RBStack (Seq.reverse rs) Empty
 
 -- | /O(1)/. Finds the top item of the stack, whatever it colour it is tagged
 -- with. Returns this item and the stack with that item removed or 'Nothing' if
@@ -333,7 +340,6 @@ toList = Foldable.toList . toSeq
 toLists :: RedBlueStack r b -> ([r], [b])
 toLists stack = let (rs, bs) = toSeqs stack
     in (Foldable.toList rs, Foldable.toList bs)
-
 
 -- | Convert a stack to a 'Seq'.
 toSeq :: RedBlueStack r b -> Seq (Either r b)
