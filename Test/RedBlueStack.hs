@@ -24,6 +24,8 @@ testRedBlueStack = do
     quickCheck (popRedProperty :: TestStack -> Bool)
     putStr "popBlue                                         "
     quickCheck (popBlueProperty :: TestStack -> Bool)
+    putStr "fromList . toList === id                        "
+    quickCheck (listProperty :: TestStack -> Bool)
     putStr "toList (append s1 s2) == toList s1 ++ toList s2 "
     quickCheck (appendProperty :: TestStack -> TestStack -> Bool)
     putStr "split n s == (take n s, drop n s)               "
@@ -76,6 +78,13 @@ popBlueProperty stack = let
     popAllBlue stack = case popBlue stack of
         Nothing     -> stack
         Just stack' -> popAllBlue stack'
+
+listProperty :: (Eq r, Eq b) => RedBlueStack r b -> Bool
+listProperty stack = let
+    list   = toList stack
+    stack' = fromList list
+    in
+    checkInvariants stack' && stack == stack'
 
 appendProperty :: (Eq r, Eq b) => RedBlueStack r b -> RedBlueStack r b -> Bool
 appendProperty stack1 stack2 = let

@@ -50,7 +50,7 @@ module Data.RedBlueStack
       -- ** Lists
     , fromList, toList, toLists
       -- ** Sequences
-    , toSeq, toSeqs
+    , fromSeq, toSeq, toSeqs
     ) where
 
 import Control.Exception (assert)
@@ -247,7 +247,7 @@ drop n = snd . splitAt n
 -- | /O(n)/. Split a 'RedBlueStack' at position /n/.
 -- @'splitAt' n s = ('take' n s, 'drop' n s)@.
 splitAt :: Int -> RedBlueStack r b -> (RedBlueStack r b, RedBlueStack r b)
-splitAt _ Empty = (empty, empty)
+splitAt _ Empty      = (empty, empty)
 splitAt n (RBStack rs stack)
     | n >= redLength = let
         (first, remaining) = splitAt (n - redLength) stack
@@ -327,9 +327,23 @@ foldrBlue f x = foldrRed f x . recolour
 foldlBlue :: (m -> b -> m) -> m -> RedBlueStack r b -> m
 foldlBlue f x = foldlRed f x . recolour
 
--- | /O(log n)/. Build a stack from a list.
+-- | /O(n)/. Build a stack from a list.
 fromList :: [Either r b] -> RedBlueStack r b
-fromList = Foldable.foldr' push empty
+fromList = fromListWithRed mempty
+
+-- | /O(n)/. Build a stack from a list with a given red prefix.
+fromListWithRed :: Seq r -> [Either r b] -> RedBlueStack r b
+fromListWithRed prefix []     = RBStack prefix Empty
+fromListWithRed prefix (x:xs) = case x of
+    Left r  -> fromListWithRed (prefix |> r) xs
+    Right b -> RBStack prefix $ fromListWithBlue (Seq.singleton b) xs
+
+-- | /O(n)/. Build a stack from a list with a given blue prefix
+fromListWithBlue :: Seq b -> [Either r b] -> RedBlueStack b r
+fromListWithBlue prefix []     = RBStack prefix Empty
+fromListWithBlue prefix (x:xs) = case x of
+    Left r  -> RBStack prefix $ fromListWithRed (Seq.singleton r) xs
+    Right b -> fromListWithBlue (prefix |> b) xs
 
 -- | /O(n)/. Write the contents of the stack in a list (preserving their order).
 toList :: RedBlueStack r b -> [Either r b]
@@ -340,6 +354,10 @@ toList = Foldable.toList . toSeq
 toLists :: RedBlueStack r b -> ([r], [b])
 toLists stack = let (rs, bs) = toSeqs stack
     in (Foldable.toList rs, Foldable.toList bs)
+
+-- | /O(n)/. Build a stack from a 'Seq'.
+fromSeq :: Seq (Either r b) -> RedBlueStack r b
+fromSeq = fromList . Foldable.toList
 
 -- | Convert a stack to a 'Seq'.
 toSeq :: RedBlueStack r b -> Seq (Either r b)
