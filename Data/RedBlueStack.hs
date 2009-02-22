@@ -48,9 +48,9 @@ module Data.RedBlueStack
     , foldrBlue, foldlBlue
       -- * Conversion
       -- ** Lists
-    , fromList, toList, toLists
+    , fromList, toList, toRedList, toBlueList, toLists
       -- ** Sequences
-    , fromSeq, toSeq, toSeqs
+    , fromSeq, toSeq, toRedSeq, toBlueSeq, toSeqs
     ) where
 
 import Control.Exception (assert)
@@ -126,7 +126,7 @@ singleton = either redSingleton blueSingleton
 
 -- | /O(1)/. Singleton stack holding a red item.
 redSingleton :: r -> RedBlueStack r b
-redSingleton r = RBStack (Seq.singleton r) empty
+redSingleton r = RBStack (Seq.singleton r) Empty
 
 -- | /O(1)/. Singleton stack holding a blue item.
 blueSingleton :: b -> RedBlueStack r b
@@ -247,7 +247,7 @@ drop n = snd . splitAt n
 -- | /O(n)/. Split a 'RedBlueStack' at position /n/.
 -- @'splitAt' n s = ('take' n s, 'drop' n s)@.
 splitAt :: Int -> RedBlueStack r b -> (RedBlueStack r b, RedBlueStack r b)
-splitAt _ Empty      = (empty, empty)
+splitAt _ Empty      = (mempty, mempty)
 splitAt n (RBStack rs stack)
     | n >= redLength = let
         (first, remaining) = splitAt (n - redLength) stack
@@ -271,10 +271,10 @@ dropWhile p = snd . span p
 -- @ 'span' p s = ('takeWhile' p s, 'dropWhile' p s) @.
 span :: (Either r b -> Bool) -> RedBlueStack r b -> (RedBlueStack r b, RedBlueStack r b)
 span p stack = case view stack of
-    Nothing      -> (empty, empty)
+    Nothing      -> (mempty, mempty)
     Just (x, xs) -> if p x
         then let (yes, no) = span p xs in (push x yes, no)
-        else (empty, stack)
+        else (mempty, stack)
 
 -- | /O(n)/. Returns a tuple of 'RedBlueStack's. The first is the longest prefix
 -- /not/ fulfilling the predicate, the second one is the rest of the
@@ -349,6 +349,14 @@ fromListWithBlue prefix (x:xs) = case x of
 toList :: RedBlueStack r b -> [Either r b]
 toList = Foldable.toList . toSeq
 
+-- | /O(n)/. List all red items in the stack.
+toRedList :: RedBlueStack r b -> [r]
+toRedList = fst . toLists
+
+-- | /O(n)/. List all blue items in the stack.
+toBlueList :: RedBlueStack r b -> [b]
+toBlueList = snd . toLists
+
 -- | /O(n)/. Split the contents of the stack in a red and a blue list, each of
 -- them preserving the order of elements.
 toLists :: RedBlueStack r b -> ([r], [b])
@@ -364,6 +372,14 @@ toSeq :: RedBlueStack r b -> Seq (Either r b)
 toSeq Empty                           = mempty
 toSeq (RBStack rs Empty)              = fmap Left rs
 toSeq (RBStack rs (RBStack bs stack)) = fmap Left rs >< fmap Right bs >< toSeq stack
+
+-- | Return a 'Seq' of all red items in the stack.
+toRedSeq :: RedBlueStack r b -> Seq r
+toRedSeq = fst . toSeqs
+
+-- | Return a 'Seq' of all blue items in the stack.
+toBlueSeq :: RedBlueStack r b -> Seq b
+toBlueSeq = snd . toSeqs
 
 -- | Separate the red from the blue items in (order-preserving) 'Seq's.
 toSeqs :: RedBlueStack r b -> (Seq r, Seq b)
