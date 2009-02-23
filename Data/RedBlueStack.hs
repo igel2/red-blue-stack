@@ -54,6 +54,7 @@ module Data.RedBlueStack
     ) where
 
 import Control.Exception (assert)
+import Data.Binary
 import Data.Foldable as Foldable hiding (toList)
 import qualified Data.Foldable as Foldable
 import Data.Monoid
@@ -64,7 +65,7 @@ import Data.Typeable
 import Prelude hiding
     ( break, drop, dropWhile, foldl, foldr, length, null, reverse, span, splitAt
     , take, takeWhile )
-import Text.Read
+import Text.Read hiding (get)
 
 -- | Red-blue-stack type. @r@ and @b@ are the types of red and blue items.
 data RedBlueStack r b
@@ -105,6 +106,10 @@ instance Functor (RedBlueStack r) where
 instance Foldable.Foldable (RedBlueStack r) where
     foldr = foldrBlue
     foldl = foldlBlue
+
+instance (Binary r, Binary b) => Binary (RedBlueStack r b) where
+    put = put . toList
+    get = fmap fromList get
 
 -- | /O(1)/. Find out if the stack is empty.
 isEmpty :: RedBlueStack r b -> Bool
