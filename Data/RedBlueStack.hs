@@ -108,8 +108,19 @@ instance Foldable.Foldable (RedBlueStack r) where
     foldl = foldlBlue
 
 instance (Binary r, Binary b) => Binary (RedBlueStack r b) where
-    put = put . toList
-    get = fmap fromList get
+    put Empty              = put (-1 :: Int)
+    put (RBStack rs stack) = do
+      put (length rs :: Int)
+      forM_ rs put
+      put stack
+
+    get = do
+      len <- get :: Get Int
+      if len < 0
+         then return Empty
+         else do rs    <- sequence (replicate len get)
+                 stack <- get
+                 return $ RBStack (Seq.fromList rs) stack
 
 -- | /O(1)/. Find out if the stack is empty.
 isEmpty :: RedBlueStack r b -> Bool
