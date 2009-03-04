@@ -40,6 +40,7 @@ module Data.RedBlueStack
       -- ** Substacks
     , take, drop, splitAt
     , takeWhile, dropWhile, span, break
+    , filter, partition
       -- * Map
     , mapBoth, mapRed, mapBlue
       -- * Fold
@@ -59,12 +60,13 @@ import Data.Foldable as Foldable hiding ( toList )
 import qualified Data.Foldable as Foldable
 import Data.Monoid
 import Data.Ord
-import Data.Sequence hiding (drop, empty, fromList, reverse, singleton, splitAt, take)
+import Data.Sequence hiding
+    ( drop, empty, fromList, reverse, singleton, splitAt, take )
 import qualified Data.Sequence as Seq
 import Data.Typeable
 import Prelude hiding
-    ( break, drop, dropWhile, foldl, foldr, length, null, reverse, span, splitAt
-    , take, takeWhile )
+    ( break, drop, dropWhile, filter, foldl, foldr, length, null, reverse, span
+    , splitAt, take, takeWhile )
 import Text.Read hiding ( get )
 
 -- | Red-blue-stack type. @r@ and @b@ are the types of red and blue items.
@@ -297,6 +299,20 @@ span p stack = case view stack of
 -- 'RedBlueStack'. @ 'break' p = 'span' ('not' . p) @.
 break :: (Either r b -> Bool) -> RedBlueStack r b -> (RedBlueStack r b, RedBlueStack r b)
 break p = span (not . p)
+
+-- | /O(n)/. Only keep those elements that satisfy a given predicate.
+filter :: (Either r b -> Bool) -> RedBlueStack r b -> RedBlueStack r b
+filter p = fst . partition p
+
+-- | /O(n)/. Separate a 'RedBlueStack' in one that satisfies the predicate and
+-- one that doesn't.
+-- @ 'partition' p s = ('filter' p s, 'filter' ('not' . p) s) @.
+partition :: (Either r b -> Bool) -> RedBlueStack r b -> (RedBlueStack r b, RedBlueStack r b)
+partition p stack = case view stack of
+    Nothing      -> (mempty, mempty)
+    Just (x, xs) -> let (yes, no) = partition p xs in if p x
+        then (push x yes, no)
+        else (yes, push x no)
 
 -- | /O(n)/. Map both red and blue elements.
 mapBoth :: (r -> r') -> (b -> b') -> RedBlueStack r b -> RedBlueStack r' b'

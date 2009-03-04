@@ -3,9 +3,10 @@ module Test.RedBlueStack
     ) where
 
 import Data.Binary
+import qualified Data.List as List
 import Data.RedBlueStack
-import Data.Sequence hiding (drop, fromList, splitAt, take)
-import Prelude hiding (break, drop, dropWhile, null, span, splitAt, take, takeWhile)
+import Data.Sequence hiding ( drop, fromList, splitAt, take )
+import Prelude hiding ( break, drop, dropWhile, filter, null, span, splitAt, take, takeWhile )
 import Test.QuickCheck
 
 type TestStack  = RedBlueStack Int Char
@@ -35,6 +36,8 @@ testRedBlueStack = do
     quickCheck (splitProperty :: TestStack -> Int -> Bool)
     putStr "span/break/takeWhile/dropWhile                  "
     quickCheck (spanProperty prop :: TestStack -> Bool)
+    putStr "partition/filter                                "
+    quickCheck (partitionProperty prop :: TestStack -> Bool)
     return ()
     where
     prop (Left n)  = n `mod` 2 == 0
@@ -78,7 +81,7 @@ popRedProperty = popBlueProperty . recolour
 
 popBlueProperty :: (Eq r, Eq b) => RedBlueStack r b -> Bool
 popBlueProperty stack = let
-    list   = filter (\x -> case x of { Left _ -> True ; _ -> False }) $ toList stack
+    list   = List.filter (\x -> case x of { Left _ -> True ; _ -> False }) $ toList stack
     stack' = popAllBlue stack
     in
     list == toList stack' && checkInvariants stack'
@@ -123,4 +126,11 @@ spanProperty p stack = let
         && (case view stack2 of
             Nothing     -> True
             Just (x, _) -> not $ p x)
+
+partitionProperty :: (Eq r, Eq b) => (Either r b -> Bool) -> RedBlueStack r b -> Bool
+partitionProperty p stack = let
+    (stack1, stack2) = partition p stack
+    in
+    (filter p stack, filter (not . p) stack) == (stack1, stack2)
+        && (List.partition p (toList stack)) == (toList stack1, toList stack2)
 
