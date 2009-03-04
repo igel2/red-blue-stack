@@ -2,6 +2,7 @@ module Test.RedBlueStack
     ( testRedBlueStack
     ) where
 
+import Data.Binary
 import Data.RedBlueStack
 import Data.Sequence hiding (drop, fromList, splitAt, take)
 import Prelude hiding (break, drop, dropWhile, null, span, splitAt, take, takeWhile)
@@ -16,6 +17,8 @@ testRedBlueStack = do
     quickCheck (checkInvariants :: TestStack -> Bool)
     putStr "read . show === id                              "
     quickCheck (readShowProperty :: TestStack -> Bool)
+    putStr "decode . encode === id                          "
+    quickCheck (binaryProperty :: TestStack -> Bool)
     putStr "recolour . recolour === id                      "
     quickCheck (recolourProperty :: TestStack -> Bool)
     putStr "view (push x stack) == Just (x, stack)          "
@@ -55,6 +58,11 @@ checkInvariants (RBStack rs stack) = if null rs
 
 readShowProperty :: (Eq r, Eq b, Read r, Read b, Show r, Show b) => RedBlueStack r b -> Bool
 readShowProperty stack = read (show stack) == stack
+
+binaryProperty :: (Eq r, Binary r, Eq b, Binary b) => RedBlueStack r b -> Bool
+binaryProperty stack = let
+    stack' = decode (encode stack)
+    in checkInvariants stack' && stack' == stack
 
 recolourProperty :: (Eq r, Eq b) => RedBlueStack r b -> Bool
 recolourProperty stack = let

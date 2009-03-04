@@ -53,9 +53,9 @@ module Data.RedBlueStack
     , fromSeq, toSeq, toRedSeq, toBlueSeq, toSeqs
     ) where
 
-import Control.Exception (assert)
+import Control.Exception ( assert )
 import Data.Binary
-import Data.Foldable as Foldable hiding (toList)
+import Data.Foldable as Foldable hiding ( toList )
 import qualified Data.Foldable as Foldable
 import Data.Monoid
 import Data.Ord
@@ -65,7 +65,7 @@ import Data.Typeable
 import Prelude hiding
     ( break, drop, dropWhile, foldl, foldr, length, null, reverse, span, splitAt
     , take, takeWhile )
-import Text.Read hiding (get)
+import Text.Read hiding ( get )
 
 -- | Red-blue-stack type. @r@ and @b@ are the types of red and blue items.
 data RedBlueStack r b
