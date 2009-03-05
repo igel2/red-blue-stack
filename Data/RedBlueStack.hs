@@ -55,15 +55,14 @@ module Data.RedBlueStack
     ) where
 
 import Control.Exception ( assert )
-import Data.Binary
-import Data.Foldable as Foldable hiding ( toList )
-import qualified Data.Foldable as Foldable
-import Data.Monoid
-import Data.Ord
-import Data.Sequence hiding
-    ( drop, empty, fromList, reverse, singleton, splitAt, take )
-import qualified Data.Sequence as Seq
-import Data.Typeable
+import Data.Binary ( Binary(..), Get )
+import Data.Foldable ( Foldable(..), forM_ )
+import qualified Data.Foldable as Foldable ( toList )
+import Data.Monoid ( Monoid(..) )
+import Data.Ord ( comparing )
+import Data.Sequence ( Seq, ViewL(..), length, null, viewl, (><), (<|), (|>) )
+import qualified Data.Sequence as Seq ( fromList, reverse, singleton, splitAt )
+import Data.Typeable ( Typeable )
 import Prelude hiding
     ( break, drop, dropWhile, filter, foldl, foldr, length, null, reverse, span
     , splitAt, take, takeWhile )
@@ -105,7 +104,7 @@ instance Monoid (RedBlueStack r b) where
 instance Functor (RedBlueStack r) where
     fmap = mapBlue
 
-instance Foldable.Foldable (RedBlueStack r) where
+instance Foldable (RedBlueStack r) where
     foldr = foldrBlue
     foldl = foldlBlue
 
