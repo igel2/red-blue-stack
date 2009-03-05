@@ -24,8 +24,8 @@ Cabal-Version:       >= 1.2
 Library
   Build-Depends:
       base
-    , binary >= 0.4
-    , containers >= 0.1
+    , binary >= 0.2
+    , containers >= 0.2
   Exposed-Modules:   Data.RedBlueStack
   ghc-options:       -O2 -Wall -fwarn-tabs
 
