@@ -12,7 +12,8 @@
 -- Whenever the /O/-notation is used, /n/ denotes the total number of elements
 -- in the stack. /r/ (and /b/) denote the minimum of the lengths of the first
 -- two red (or blue) subsequences on the stack. For instance an @[r,r,r,r,b,r,r]@
--- stack would have /r = 2/ and /b = 0/.
+-- stack would have /r = 2/ and /b = 0/. /chunks/ denotes the total number chunks
+-- of elements with the same colour, e.g. @[r,r,r,b,b,r,b,r]@ has 5 chunks.
 --
 -- This module is strongly inspired by a 2008\/09\/25 post of apfelmus on the
 -- Haskell-cafe mailing list.
@@ -80,15 +81,15 @@ instance (Show r, Show b) => Show (RedBlueStack r b) where
 instance (Read r, Read b) => Read (RedBlueStack r b) where
 #ifdef __GLASGOW_HASKELL__
     readPrec = parens $ prec 10 $ do
-        Ident "fromList" <- lexP
-        xs               <- readPrec
-        return (fromList xs)
+      Ident "fromList" <- lexP
+      xs               <- readPrec
+      return (fromList xs)
     readListPrec = readListPrecDefault
 #else
     readsPrec p = readParen (p > 10) $ \r -> do
-        ("fromList", s) <- lex r
-        (xs, t)         <- reads s
-        return (fromList xs, t)
+      ("fromList", s) <- lex r
+      (xs, t)         <- reads s
+      return (fromList xs, t)
 #endif
 
 instance (Eq r, Eq b) => Eq (RedBlueStack r b) where
@@ -128,7 +129,7 @@ isEmpty :: RedBlueStack r b -> Bool
 isEmpty Empty              = True
 isEmpty (RBStack rs stack) = null rs && isEmpty stack -- invariant => max. one recursion => O(1)
 
--- | /O(n)/. Count the elements in the stack.
+-- | /O(chunks)/. Count the elements in the stack.
 size :: RedBlueStack r b -> Int
 size Empty              = 0
 size (RBStack rs stack) = length rs + size stack
@@ -162,8 +163,9 @@ pushRed r (RBStack rs stack) = RBStack (r <| rs) stack
 pushBlue :: b -> RedBlueStack r b -> RedBlueStack r b
 pushBlue b = recolour . pushRed b . recolour
 
--- | /O(n)/ (length of the first stack). Appends the elements of the 2nd stack
--- to the first, so that @append s1 s2 == fromList (toList s1 ++ toList s2)@.
+-- | /O(chunks + log lastchunk)/ (chunks of first stack + log of last chunk of
+-- the first stack). Appends the elements of the 2nd stack to the first, so that
+-- @append s1 s2 == fromList (toList s1 ++ toList s2)@.
 append :: RedBlueStack r b -> RedBlueStack r b -> RedBlueStack r b
 append stack1              Empty               = stack1
 append Empty               stack2              = stack2
