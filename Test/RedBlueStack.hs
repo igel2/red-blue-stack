@@ -84,11 +84,13 @@ popBlueProperty stack = let
     list   = List.filter (\x -> case x of { Left _ -> True ; _ -> False }) $ toList stack
     stack' = popAllBlue stack
     in
-    list == toList stack' && checkInvariants stack'
+    maybe False (\stack' -> list == toList stack') (popAllBlue stack)
     where
     popAllBlue stack = case popBlue stack of
-        Nothing     -> stack
-        Just stack' -> popAllBlue stack'
+        Nothing     -> Just stack
+        Just stack' -> if checkInvariants stack'
+            then popAllBlue stack'
+            else Nothing
 
 listProperty :: (Eq r, Eq b) => RedBlueStack r b -> Bool
 listProperty stack = let

@@ -1,4 +1,4 @@
-{-# LANGUAGE CPP, DeriveDataTypeable #-}
+{-# LANGUAGE CPP, DeriveDataTypeable, ViewPatterns #-}
 
 -- | A Red-Blue-Stack behaves just like a normal stack. But it additionally tags
 -- every pushed element with a colour (red or blue). It is possible to pop the
@@ -55,7 +55,6 @@ module Data.RedBlueStack
     , fromSeq, toSeq, toRedSeq, toBlueSeq, toSeqs
     ) where
 
-import Control.Exception ( assert )
 import Data.Binary ( Binary(..), Get )
 import Data.Foldable ( Foldable(..), forM_ )
 import qualified Data.Foldable as Foldable ( toList )
@@ -120,14 +119,15 @@ instance (Binary r, Binary b) => Binary (RedBlueStack r b) where
       len <- get :: Get Int
       if len < 0
          then return Empty
-         else do rs    <- sequence (replicate len get)
+         else do rs    <- fmap Seq.fromList $ sequence (replicate len get)
                  stack <- get
-                 return $ RBStack (Seq.fromList rs) stack
+                 return $ RBStack rs stack
 
 -- | /O(1)/. Find out if the stack is empty.
 isEmpty :: RedBlueStack r b -> Bool
-isEmpty Empty              = True
-isEmpty (RBStack rs stack) = null rs && isEmpty stack -- invariant => max. one recursion => O(1)
+isEmpty Empty                         = True
+isEmpty (RBStack (null -> True) Empty) = True -- first Seq may be empty
+isEmpty _                             = False
 
 -- | /O(chunks)/. Count the elements in the stack.
 size :: RedBlueStack r b -> Int
@@ -176,10 +176,9 @@ append (RBStack rs1 blue1@(RBStack bs1 tail1)) stack2@(RBStack rs2 tail2)
 
 -- | /O(1)/. Swaps the colours of all items.
 recolour :: RedBlueStack r b -> RedBlueStack b r
-recolour Empty                     = Empty
-recolour stack@(RBStack rs stack') = if null rs
-    then stack'
-    else RBStack mempty stack
+recolour Empty                         = Empty
+recolour (RBStack (null -> True) stack) = stack
+recolour stack                         = RBStack mempty stack
 {-# INLINE recolour #-}
 {-# RULES "recolour/recolour" forall s. recolour (recolour s) = s #-}
 
@@ -193,41 +192,30 @@ reverse (RBStack rs stack) = recolour (reverse stack)
 -- with. Returns this item and the stack with that item removed or 'Nothing' if
 -- the stack was empty.
 view :: RedBlueStack r b -> Maybe (Either r b, RedBlueStack r b)
-view Empty               = Nothing
-view (RBStack rss stack) = case viewl rss of
-    r :< rs -> Just (Left r, RBStack rs stack)
-    EmptyL  -> case view stack of
-        Nothing          -> Nothing
-        Just (b, stack') -> Just (either Right Left b, recolour stack')
+view Empty                             = Nothing
+view (RBStack (viewl -> r :< rs) stack) = Just (Left r, RBStack rs stack)
+view (RBStack (viewl -> EmptyL)  stack) =
+    fmap (\(b, stack') -> (either Right Left b, recolour stack')) $ view stack
 {-# INLINE view #-}
 
 -- | /O(1)/ for the top element and /O(log r)/ for the remaining stack. Finds
 -- the topmost red item in the stack and removes it from the stack. If the stack
 -- doesn't contain any red item, 'Nothing' is returned.
 viewRed :: RedBlueStack r b -> Maybe (r, RedBlueStack r b)
-viewRed Empty               = Nothing
-viewRed (RBStack rs1 stack) = case viewl rs1 of
-    r :< rs -> Just (r, RBStack rs stack)
-    EmptyL  -> case stack of
-        RBStack bs (RBStack rs2 stack') -> case viewl rs2 of
-            r :< rs -> if null rs
-                then Just (r, recolour (pushMany bs stack'))
-                else Just (r, recolour (RBStack bs (RBStack rs stack')))
-            EmptyL  -> assert False Nothing -- only the 1st, not the 3rd Seq may be empty!
-        _                               -> Nothing
-    where
-    pushMany :: Seq r -> RedBlueStack r b -> RedBlueStack r b
-    pushMany rs Empty              = RBStack rs Empty
-    pushMany rs (RBStack rs' rest) = RBStack (rs >< rs') rest
+viewRed  = fmap (fmap recolour) . viewBlue . recolour
 {-# INLINE viewRed #-}
 
 -- | /O(1)/ for the top element and /O(log b)/ for the remaining stack. Finds
 -- the topmost blue item in the stack and removes it from the stack. If the
 -- stack doesn't contain any blue item, 'Nothing' is returned.
 viewBlue :: RedBlueStack r b -> Maybe (b, RedBlueStack r b)
-viewBlue stack = case viewRed (recolour stack) of
-    Nothing          -> Nothing
-    Just (x, stack') -> Just (x, recolour stack')
+viewBlue (RBStack rs (RBStack (viewl -> b :< bs) Empty))
+    | null bs   = Just (b, RBStack rs Empty)
+    | otherwise = Just (b, RBStack rs (RBStack bs Empty))
+viewBlue (RBStack rs1 (RBStack (viewl -> b :< bs) (RBStack rs2 stack)))
+    | null bs   = Just (b, RBStack (rs1 >< rs2) stack)
+    | otherwise = Just (b, RBStack rs1 (RBStack bs (RBStack rs2 stack)))
+viewBlue _      = Nothing
 {-# INLINE viewBlue #-}
 
 -- | /O(1)/. Find the top element of the stack, no matter how it is coloured.
@@ -274,8 +262,7 @@ splitAt n (RBStack rs stack)
     | otherwise      = let
          (rs', rs'') = Seq.splitAt n rs
          in (RBStack rs' Empty, RBStack rs'' stack)
-    where
-    redLength = length rs
+    where redLength = length rs
 
 -- | /O(n)/. Returns the longest prefix of elements fulfilling the predicate.
 takeWhile :: (Either r b -> Bool) -> RedBlueStack r b -> RedBlueStack r b
@@ -289,11 +276,10 @@ dropWhile p = snd . span p
 -- fulfilling the predicate, the second one is the rest of the 'RedBlueStack'.
 -- @ 'span' p s = ('takeWhile' p s, 'dropWhile' p s) @.
 span :: (Either r b -> Bool) -> RedBlueStack r b -> (RedBlueStack r b, RedBlueStack r b)
-span p stack = case view stack of
-    Nothing      -> (mempty, mempty)
-    Just (x, xs) -> if p x
-        then let (yes, no) = span p xs in (push x yes, no)
-        else (mempty, stack)
+span _ (view -> Nothing)          = (mempty, mempty)
+span p stack@(view -> Just (x, xs))
+     | p x       = let (yes, no) = span p xs in (push x yes, no)
+     | otherwise = (mempty, stack)
 
 -- | /O(n)/. Returns a tuple of 'RedBlueStack's. The first is the longest prefix
 -- /not/ fulfilling the predicate, the second one is the rest of the
@@ -309,11 +295,11 @@ filter p = fst . partition p
 -- one that doesn't.
 -- @ 'partition' p s = ('filter' p s, 'filter' ('not' . p) s) @.
 partition :: (Either r b -> Bool) -> RedBlueStack r b -> (RedBlueStack r b, RedBlueStack r b)
-partition p stack = case view stack of
-    Nothing      -> (mempty, mempty)
-    Just (x, xs) -> let (yes, no) = partition p xs in if p x
-        then (push x yes, no)
-        else (yes, push x no)
+partition _ (view -> Nothing)      = (mempty, mempty)
+partition p (view -> Just (x, xs))
+    | p x       = (push x yes, no)
+    | otherwise = (yes, push x no)
+    where (yes, no) = partition p xs
 
 -- | /O(n)/. Map both red and blue elements.
 mapBoth :: (r -> r') -> (b -> b') -> RedBlueStack r b -> RedBlueStack r' b'
@@ -418,6 +404,5 @@ toBlueSeq = snd . toSeqs
 toSeqs :: RedBlueStack r b -> (Seq r, Seq b)
 toSeqs Empty                           = (mempty, mempty)
 toSeqs (RBStack rs Empty)              = (rs,     mempty)
-toSeqs (RBStack rs (RBStack bs stack)) = let
-    (rss, bss) = toSeqs stack
+toSeqs (RBStack rs (RBStack bs stack)) = let (rss, bss) = toSeqs stack
     in (rs >< rss, bs >< bss)
