@@ -55,14 +55,15 @@ module Data.RedBlueStack
     , fromSeq, toSeq, toRedSeq, toBlueSeq, toSeqs
     ) where
 
-import Data.Binary ( Binary(..), Get )
-import Data.Foldable ( Foldable(..), forM_ )
-import qualified Data.Foldable as Foldable ( toList )
-import Data.Monoid ( Monoid(..) )
-import Data.Ord ( comparing )
-import Data.Sequence ( Seq, ViewL(..), length, null, viewl, (><), (<|), (|>) )
-import qualified Data.Sequence as Seq ( fromList, reverse, singleton, splitAt )
-import Data.Typeable ( Typeable )
+import Control.Monad hiding ( forM_ )
+import Data.Binary
+import Data.Foldable hiding ( toList )
+import qualified Data.Foldable as Foldable
+import Data.Monoid
+import Data.Ord
+import Data.Sequence hiding ( empty, drop, fromList, reverse, singleton, splitAt, take )
+import qualified Data.Sequence as Seq
+import Data.Typeable
 import Prelude hiding
     ( break, drop, dropWhile, filter, foldl, foldr, length, null, reverse, span
     , splitAt, take, takeWhile )
