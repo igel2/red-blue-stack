@@ -76,21 +76,14 @@ data RedBlueStack r b
     deriving (Typeable)
 
 instance (Show r, Show b) => Show (RedBlueStack r b) where
-    show = ("fromList " ++) . show . toList
+    showsPrec d stack = showParen (d > 10)
+        $ showString "fromList" . (showsPrec 11 (toList stack))
 
 instance (Read r, Read b) => Read (RedBlueStack r b) where
-#ifdef __GLASGOW_HASKELL__
     readPrec = parens $ prec 10 $ do
-      Ident "fromList" <- lexP
-      xs               <- readPrec
-      return (fromList xs)
+        Ident "fromList" <- lexP
+        fmap fromList readPrec
     readListPrec = readListPrecDefault
-#else
-    readsPrec p = readParen (p > 10) $ \r -> do
-      ("fromList", s) <- lex r
-      (xs, t)         <- reads s
-      return (fromList xs, t)
-#endif
 
 instance (Eq r, Eq b) => Eq (RedBlueStack r b) where
     stack1 == stack2 = (toList stack1) == (toList stack2)
