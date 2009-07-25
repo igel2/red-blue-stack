@@ -25,5 +25,4 @@ Library
     , binary >= 0.2
     , containers >= 0.2
   Exposed-Modules:   Data.RedBlueStack
-  ghc-options:       -O2 -Wall -fwarn-tabs
-
+  ghc-options:       -Wall -fwarn-tabs
