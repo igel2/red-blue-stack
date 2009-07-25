@@ -104,24 +104,21 @@ instance Foldable (RedBlueStack r) where
 
 instance (Binary r, Binary b) => Binary (RedBlueStack r b) where
     put Empty              = put (-1 :: Int)
-    put (RBStack rs stack) = do
-      put (length rs :: Int)
-      forM_ rs put
-      put stack
+    put (RBStack rs stack) = do put (length rs :: Int)
+                                forM_ rs put
+                                put stack
 
     get = do
-      len <- get :: Get Int
-      if len < 0
-         then return Empty
-         else do rs    <- fmap Seq.fromList $ sequence (replicate len get)
-                 stack <- get
-                 return $ RBStack rs stack
+        len <- get :: Get Int
+        if len < 0
+            then return Empty
+            else liftM2 RBStack (fmap Seq.fromList $ sequence (replicate len get)) get
 
 -- | /O(1)/. Find out if the stack is empty.
 isEmpty :: RedBlueStack r b -> Bool
-isEmpty Empty                         = True
+isEmpty Empty                          = True
 isEmpty (RBStack (null -> True) Empty) = True -- first Seq may be empty
-isEmpty _                             = False
+isEmpty _                              = False
 
 -- | /O(chunks)/. Count the elements in the stack.
 size :: RedBlueStack r b -> Int
@@ -170,9 +167,9 @@ append (RBStack rs1 blue1@(RBStack bs1 tail1)) stack2@(RBStack rs2 tail2)
 
 -- | /O(1)/. Swaps the colours of all items.
 recolour :: RedBlueStack r b -> RedBlueStack b r
-recolour Empty                         = Empty
+recolour Empty                          = Empty
 recolour (RBStack (null -> True) stack) = stack
-recolour stack                         = RBStack mempty stack
+recolour stack                          = RBStack mempty stack
 {-# INLINE recolour #-}
 {-# RULES "recolour/recolour" forall s. recolour (recolour s) = s #-}
 
@@ -186,7 +183,7 @@ reverse (RBStack rs stack) = recolour (reverse stack)
 -- with. Returns this item and the stack with that item removed or 'Nothing' if
 -- the stack was empty.
 view :: RedBlueStack r b -> Maybe (Either r b, RedBlueStack r b)
-view Empty                             = Nothing
+view Empty                              = Nothing
 view (RBStack (viewl -> r :< rs) stack) = Just (Left r, RBStack rs stack)
 view (RBStack (viewl -> EmptyL)  stack) =
     fmap (\(b, stack') -> (either Right Left b, recolour stack')) $ view stack
@@ -196,7 +193,7 @@ view (RBStack (viewl -> EmptyL)  stack) =
 -- the topmost red item in the stack and removes it from the stack. If the stack
 -- doesn't contain any red item, 'Nothing' is returned.
 viewRed :: RedBlueStack r b -> Maybe (r, RedBlueStack r b)
-viewRed  = fmap (fmap recolour) . viewBlue . recolour
+viewRed = fmap (fmap recolour) . viewBlue . recolour
 {-# INLINE viewRed #-}
 
 -- | /O(1)/ for the top element and /O(log b)/ for the remaining stack. Finds
@@ -270,7 +267,7 @@ dropWhile p = snd . span p
 -- fulfilling the predicate, the second one is the rest of the 'RedBlueStack'.
 -- @ 'span' p s = ('takeWhile' p s, 'dropWhile' p s) @.
 span :: (Either r b -> Bool) -> RedBlueStack r b -> (RedBlueStack r b, RedBlueStack r b)
-span _ (view -> Nothing)          = (mempty, mempty)
+span _ (view -> Nothing) = (mempty, mempty)
 span p stack@(view -> Just (x, xs))
      | p x       = let (yes, no) = span p xs in (push x yes, no)
      | otherwise = (mempty, stack)
@@ -289,7 +286,7 @@ filter p = fst . partition p
 -- one that doesn't.
 -- @ 'partition' p s = ('filter' p s, 'filter' ('not' . p) s) @.
 partition :: (Either r b -> Bool) -> RedBlueStack r b -> (RedBlueStack r b, RedBlueStack r b)
-partition _ (view -> Nothing)      = (mempty, mempty)
+partition _ (view -> Nothing) = (mempty, mempty)
 partition p (view -> Just (x, xs))
     | p x       = (push x yes, no)
     | otherwise = (yes, push x no)
