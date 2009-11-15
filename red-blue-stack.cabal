@@ -8,7 +8,7 @@ Description:         A Red-Blue-Stack behaves just like a normal stack. But it
                      (red or blue). It is possible to pop the topmost (in the
                      LIFO sense) red/blue element or the overall-top element
                      (no matter which colour it has been tagged with).
-Homepage:            http://github.com/igel2/red-blue-stack/
+Homepage:            http://github.com/igel2/red-blue-stack
 
 License:             BSD3
 License-File:        LICENSE
