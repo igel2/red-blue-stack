@@ -102,14 +102,16 @@ instance Foldable (RedBlueStack r) where
     foldr = foldrBlue
     foldl = foldlBlue
 
+type RBSLenType = Int
+
 instance (Binary r, Binary b) => Binary (RedBlueStack r b) where
-    put Empty              = put (-1 :: Int)
-    put (RBStack rs stack) = do put (length rs :: Int)
+    put Empty              = put (-1 :: RBSLenType)
+    put (RBStack rs stack) = do put (length rs :: RBSLenType)
                                 forM_ rs put
                                 put stack
 
     get = do
-        len <- get :: Get Int
+        len <- get :: Get RBSLenType
         if len < 0
             then return Empty
             else liftM2 RBStack (fmap Seq.fromList $ sequence (replicate len get)) get
