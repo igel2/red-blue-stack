@@ -22,8 +22,9 @@ Cabal-Version:       >= 1.2
 
 Library
   Build-Depends:
-      base
+      base >= 3.0 && < 5.0
     , binary >= 0.2
-    , containers >= 0.2
+    , containers >= 0.2 
   Exposed-Modules:   Data.RedBlueStack
-  ghc-options:       -Wall -fwarn-tabs
+  GHC-Options:       -Wall -fwarn-tabs
+  Extensions:        CPP, DeriveDataTypeable, ViewPatterns
