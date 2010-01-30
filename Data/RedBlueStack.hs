@@ -61,7 +61,7 @@ import Data.Foldable hiding ( toList )
 import qualified Data.Foldable as Foldable
 import Data.Monoid
 import Data.Ord
-import Data.Sequence hiding ( empty, drop, fromList, reverse, singleton, splitAt, take )
+import Data.Sequence (Seq, ViewL(..), (><), (|>), (<|), length, null, viewl)
 import qualified Data.Sequence as Seq
 import Data.Typeable
 import Prelude hiding
